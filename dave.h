@@ -22,24 +22,25 @@ struct GameState {
 
 	dave_level levels[10];
 	GameState();
+	void loadLevels();
 };
 
 
 struct GameWindow {
 	const uint8_t DISPLAY_SCALE = 3;
-	SDL_Window* window;
-	SDL_Renderer* renderer;
+	SDL_Window* window = nullptr;
+	SDL_Renderer* renderer = nullptr;
 	GameWindow();
 	~GameWindow();
 	void checkInput(GameState &game);
 };
 
 struct GameAssets {
-	GameAssets(GameWindow gameWindow);
+	GameAssets(GameWindow &gameWindow);
 	SDL_Texture* graphics_tiles[158];
 };
 
-void render();
+void render(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
 void updateGame();
 
 #endif

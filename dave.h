@@ -36,6 +36,7 @@ struct GameState {
 	bool dave_jump = false;
 	bool on_ground = true;
 	unsigned char collisionPoints[8];
+	unsigned char jump_timer = 0;
 
 
 
@@ -72,4 +73,5 @@ void verifyInput(GameState &game);
 inline int getDaveState();
 void clearInput(GameState &game);
 void checkCollisions(GameState &game);
+void applyGravity(GameState &game);
 #endif

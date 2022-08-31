@@ -74,9 +74,11 @@ inline int getDaveState()
 
 void updateGame(GameState &game, GameWindow &gameWindow)
 {
+    checkCollisions(game);
     verifyInput(game);
     moveDave(game);
     scrollScreen(game);
+    applyGravity(game);
     clearInput(game);
 }
 
@@ -187,13 +189,22 @@ void moveDave(GameState &game)
     }
     if (game.dave_jump)
     {
-        game.dave_jump = false;
+        if (game.jump_timer == 0) game.jump_timer = 20;        
+        if (game.collisionPoints[0] && game.collisionPoints[1])
+        {
+            game.dave_py -= 2;
+            game.jump_timer -= 1;
+        }
+        else
+        {
+            game.jump_timer = 0;
+        }
+        if (game.jump_timer == 0) game.dave_jump = false;
     }
 }
 
 void verifyInput(GameState &game)
 {
-    checkCollisions(game);
     if (game.try_right && game.collisionPoints[2] && game.collisionPoints[3])
     {
         game.dave_right = true;
@@ -202,7 +213,12 @@ void verifyInput(GameState &game)
     {
         game.dave_left = true;
     }
-    if (game.try_jump)
+    if (game.try_jump 
+        && game.on_ground 
+        && !game.dave_jump 
+        && game.collisionPoints[0] 
+        && game.collisionPoints[1]
+    )
     {
         game.dave_jump = true;
     }
@@ -222,9 +238,9 @@ bool isClear(GameState &game, int px, int py, int whaat)
 
 	auto type = game.levels[game.current_level].tiles[grid_y*100+grid_x];
 
-    auto unwalkableTiles = {1,3,5,15,16,17,18,19,21,22,23,24,29,30};
-    if ( std::any_of(unwalkableTiles.begin(),
-                     unwalkableTiles.end(), 
+    auto solidTiles = {1,3,5,15,16,17,18,19,21,22,23,24,29,30};
+    if ( std::any_of(solidTiles.begin(),
+                     solidTiles.end(), 
                      [&type](int i) { return i == type; }
     ))
     {
@@ -245,5 +261,13 @@ void checkCollisions(GameState &game)
 	game.collisionPoints[6] = isClear(game, game.dave_px+3,  game.dave_py+12, 1);
 	game.collisionPoints[7] = isClear(game, game.dave_px+3,  game.dave_py+4,  1);
 
-    game.on_ground = (!game.collisionPoints[4] && !game.collisionPoints[5]);
+    game.on_ground = (!game.collisionPoints[4] || !game.collisionPoints[5]);
+}
+
+void applyGravity(GameState &game)
+{
+    if (!game.on_ground && game.jump_timer == 0)
+    {
+        game.dave_py += 2;
+    }
 }

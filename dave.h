@@ -3,31 +3,32 @@
 
 #include <SDL.h>
 /* Level format structure */
-struct dave_level {
-	uint8_t path[256];
-	uint8_t tiles[1000];
-	uint8_t padding[24];
+struct DaveLevel {
+	unsigned char path[256];
+	unsigned char tiles[1000];
+	unsigned char padding[24];
 };
 
 struct GameState {
-	bool quit;
-	char current_level;
-	unsigned char view_x;
-	unsigned char view_y;
+	bool quit = false;
+	unsigned char current_level = 0;
+	unsigned char view_x = 0;
+	unsigned char view_y = 0;
+	char scroll_x = 0;
 
 	bool try_right;
 	bool try_left;
 	bool try_jump;
 	bool try_down;
 
-	dave_level levels[10];
+	DaveLevel levels[10];
 	GameState();
 	void loadLevels();
 };
 
 
 struct GameWindow {
-	const uint8_t DISPLAY_SCALE = 3;
+	const unsigned char DISPLAY_SCALE = 3;
 	SDL_Window* window = nullptr;
 	SDL_Renderer* renderer = nullptr;
 	GameWindow();
@@ -41,6 +42,6 @@ struct GameAssets {
 };
 
 void render(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
-void updateGame();
+void updateGame(GameState &game, GameWindow &gameWindow);
 
 #endif

@@ -11,9 +11,15 @@ int main(int argc, char* argv[])
     GameState game;
     while(!game.quit)
     {
+        auto timer_begin = SDL_GetTicks();
         gameWindow.checkInput(game);
-        updateGame();
+        updateGame(game, gameWindow);
         render(assets, game, gameWindow);
+        auto timer_end = SDL_GetTicks();
+        auto delay = 33 - (timer_end - timer_begin);
+        // delay > 33 means that negative overflow happened
+        delay = delay > 33 ? 0 : delay;
+        SDL_Delay(delay);
     }
     return 0;
 }
@@ -38,8 +44,39 @@ void render(const GameAssets &assets, const GameState &game, GameWindow &gameWin
     SDL_RenderPresent(gameWindow.renderer);
 }
 
-void updateGame()
+void updateGame(GameState &game, GameWindow &gameWindow)
 {
+    if (game.current_level == 0xFF )
+        game.current_level = 0;
+
+    if (game.current_level > 9 )
+        game.current_level = 9;
+
+    if (game.scroll_x > 0)
+    {
+        if (game.view_x == 80)
+        {
+            game.scroll_x = 0;
+        }
+        else
+        {
+            game.view_x++;
+            game.scroll_x--;
+        }
+    }
+
+    if (game.scroll_x < 0)
+    {
+        if (game.view_x == 0)
+        {
+            game.scroll_x = 0;
+        }
+        else
+        {
+            game.view_x--;
+            game.scroll_x++;
+        }
+    }
 
 }
 
@@ -75,17 +112,25 @@ void GameWindow::checkInput(GameState &game)
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
-	const uint8_t *keystate = SDL_GetKeyboardState(NULL);
-	if ( keystate[SDL_SCANCODE_RIGHT] )
-		game.try_right = true;
-	if ( keystate[SDL_SCANCODE_LEFT] )
-		game.try_left = true;
-	if ( keystate[SDL_SCANCODE_UP] )
-		game.try_jump = true;
-	if ( keystate[SDL_SCANCODE_DOWN] )
-		game.try_down = true;
-    if (event.type == SDL_QUIT)
-        game.quit = true;
+    if (event.type == SDL_QUIT) game.quit = true;
+    if (event.type == SDL_KEYDOWN)
+    {
+        switch(event.key.keysym.sym)
+        {
+            case SDLK_RIGHT:
+                game.scroll_x = 15;
+                break;
+            case SDLK_LEFT:
+                game.scroll_x = -15;
+                break;
+            case SDLK_UP:
+                game.current_level++;
+                break;
+            case SDLK_DOWN:
+                game.current_level--;
+                break;
+        }
+    }
 }
 
 GameWindow::~GameWindow()
@@ -97,10 +142,6 @@ GameWindow::~GameWindow()
 
 GameState::GameState()
 {
-    quit = false;
-    current_level = 0;
-    view_x = 0;
-    view_y = 0;
     loadLevels();
 }
 

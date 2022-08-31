@@ -26,59 +26,60 @@ int main(int argc, char* argv[])
 
 void render(const GameAssets &assets, const GameState &game, GameWindow &gameWindow)
 {
+    SDL_SetRenderDrawColor(gameWindow.renderer, 0x00, 0x00, 0x00, 0x00);
+    SDL_RenderClear(gameWindow.renderer);
+
+    drawWorld(assets, game, gameWindow);
+    drawDave(assets, game, gameWindow);
+
+    // swap the back buffer with the front buffer
+    SDL_RenderPresent(gameWindow.renderer);
+}
+
+void drawWorld(const GameAssets &assets, const GameState &game, GameWindow &gameWindow)
+{
     SDL_Rect dest;
 	/* Draw each tile in row-major */
 	for (int j=0; j < 10; j++)
 	{
-		dest.y = j*16;
-		dest.w = 16;
-		dest.h = 16;
+		dest.y = j * TILE_SIZE;
+		dest.w = TILE_SIZE;
+		dest.h = TILE_SIZE;
 		for (int i=0; i < 20; i++)
 		{
-			dest.x = i * 16;
+			dest.x = i * TILE_SIZE;
 			int tile_index = game.levels[game.current_level].tiles[j*100+game.view_x+i];
 			// tile_index = update_frame(game,tile_index,i);
 			SDL_RenderCopy(gameWindow.renderer, assets.graphics_tiles[tile_index], NULL, &dest);
 		}
 	}
-    SDL_RenderPresent(gameWindow.renderer);
+}
+
+void drawDave(const GameAssets &assets, const GameState &game, GameWindow &gameWindow)
+{
+    SDL_Rect dest;
+    dest.x = game.dave_px;
+    dest.y = game.dave_py;
+    dest.w = 20;
+    dest.h = 16;
+
+    SDL_RenderCopy(gameWindow.renderer, assets.graphics_tiles[getDaveState()], NULL, &dest);
+}
+
+inline int getDaveState()
+{
+    const auto STANDING_DAVE = 56;
+    return STANDING_DAVE;
 }
 
 void updateGame(GameState &game, GameWindow &gameWindow)
 {
-    if (game.current_level == 0xFF )
-        game.current_level = 0;
-
-    if (game.current_level > 9 )
-        game.current_level = 9;
-
-    if (game.scroll_x > 0)
-    {
-        if (game.view_x == 80)
-        {
-            game.scroll_x = 0;
-        }
-        else
-        {
-            game.view_x++;
-            game.scroll_x--;
-        }
-    }
-
-    if (game.scroll_x < 0)
-    {
-        if (game.view_x == 0)
-        {
-            game.scroll_x = 0;
-        }
-        else
-        {
-            game.view_x--;
-            game.scroll_x++;
-        }
-    }
-
+    verifyInput(game);
+    moveDave(game);
+    scrollScreen(game);
+    clearInput(game);
 }
+
 
 GameAssets::GameAssets(GameWindow &gameWindow)
 {
@@ -113,24 +114,10 @@ void GameWindow::checkInput(GameState &game)
 	SDL_Event event;
 	SDL_PollEvent(&event);
     if (event.type == SDL_QUIT) game.quit = true;
-    if (event.type == SDL_KEYDOWN)
-    {
-        switch(event.key.keysym.sym)
-        {
-            case SDLK_RIGHT:
-                game.scroll_x = 15;
-                break;
-            case SDLK_LEFT:
-                game.scroll_x = -15;
-                break;
-            case SDLK_UP:
-                game.current_level++;
-                break;
-            case SDLK_DOWN:
-                game.current_level--;
-                break;
-        }
-    }
+    auto keyState = SDL_GetKeyboardState(NULL);
+    if (keyState[SDL_SCANCODE_UP]) game.try_jump = true;
+    if (keyState[SDL_SCANCODE_LEFT]) game.try_left = true;
+    if (keyState[SDL_SCANCODE_RIGHT]) game.try_right = true;
 }
 
 GameWindow::~GameWindow()
@@ -155,4 +142,108 @@ void GameState::loadLevels()
         file.read((char *)&levels[j].tiles, sizeof(levels[j].tiles));
         file.read((char *)&levels[j].padding, sizeof(levels[j].padding));
     }
+}
+
+void scrollScreen(GameState &game)
+{
+    if (game.scroll_x > 0)
+    {
+        if (game.view_x == 80)
+        {
+            game.scroll_x = 0;
+        }
+        else
+        {
+            game.view_x++;
+            game.scroll_x--;
+        }
+    }
+
+    if (game.scroll_x < 0)
+    {
+        if (game.view_x == 0)
+        {
+            game.scroll_x = 0;
+        }
+        else
+        {
+            game.view_x--;
+            game.scroll_x++;
+        }
+    }
+}
+
+void moveDave(GameState &game)
+{
+    if (game.dave_left)
+    {
+        game.dave_px -= 2;
+        game.dave_left = false;
+    }
+    if (game.dave_right)
+    {
+        game.dave_px += 2;
+        game.dave_right = false;
+    }
+    if (game.dave_jump)
+    {
+        game.dave_jump = false;
+    }
+}
+
+void verifyInput(GameState &game)
+{
+    checkCollisions(game);
+    if (game.try_right && game.collisionPoints[2] && game.collisionPoints[3])
+    {
+        game.dave_right = true;
+    }
+    if (game.try_left && game.collisionPoints[6] && game.collisionPoints[7])
+    {
+        game.dave_left = true;
+    }
+    if (game.try_jump)
+    {
+        game.dave_jump = true;
+    }
+}
+
+void clearInput(GameState &game)
+{
+    game.try_jump = false;
+    game.try_left = false;
+    game.try_right = false;
+}
+
+bool isClear(GameState &game, int px, int py, int whaat)
+{
+	unsigned char grid_x = px / TILE_SIZE;
+	unsigned char grid_y = py / TILE_SIZE;
+
+	auto type = game.levels[game.current_level].tiles[grid_y*100+grid_x];
+
+    auto unwalkableTiles = {1,3,5,15,16,17,18,19,21,22,23,24,29,30};
+    if ( std::any_of(unwalkableTiles.begin(),
+                     unwalkableTiles.end(), 
+                     [&type](int i) { return i == type; }
+    ))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void checkCollisions(GameState &game)
+{
+	game.collisionPoints[0] = isClear(game, game.dave_px+4,  game.dave_py-1,  1);
+	game.collisionPoints[1] = isClear(game, game.dave_px+10, game.dave_py-1,  1);
+	game.collisionPoints[2] = isClear(game, game.dave_px+11, game.dave_py+4,  1);
+	game.collisionPoints[3] = isClear(game, game.dave_px+11, game.dave_py+12, 1);
+	game.collisionPoints[4] = isClear(game, game.dave_px+10, game.dave_py+16, 1);
+	game.collisionPoints[5] = isClear(game, game.dave_px+4,  game.dave_py+16, 1);
+	game.collisionPoints[6] = isClear(game, game.dave_px+3,  game.dave_py+12, 1);
+	game.collisionPoints[7] = isClear(game, game.dave_px+3,  game.dave_py+4,  1);
+
+    game.on_ground = (!game.collisionPoints[4] && !game.collisionPoints[5]);
 }

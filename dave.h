@@ -66,6 +66,9 @@ struct GameState {
 	unsigned short dbullet_px = 0;
 	unsigned short dbullet_py = 0;
 	char dbullet_direction = 0;
+	char ebullet_direction = 0;
+	unsigned short ebullet_px = 0;
+	unsigned short ebullet_py = 0;
 
 	// Pick ups
 	unsigned char pickup_x = 0;

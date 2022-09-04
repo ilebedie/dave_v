@@ -34,6 +34,7 @@ void render(const GameAssets &assets, const GameState &game, GameWindow &gameWin
     drawDave(assets, game, gameWindow);
     drawDBullet(assets, game, gameWindow);
     drawMonsters(assets, game, gameWindow);
+    drawEBullet(assets, game, gameWindow);
 
     // swap the back buffer with the front buffer
     SDL_RenderPresent(gameWindow.renderer);
@@ -91,6 +92,8 @@ void updateGame(GameState &game, GameWindow &gameWindow)
     moveDave(game);
     moveMonsters(game);
     updateDBullet(game);
+    fireMonsters(game);
+    updateEBullet(game);
     pickUpItem(game);
     scrollScreen(game);
     applyGravity(game);
@@ -501,6 +504,18 @@ void updateLevel(GameState &game)
         }
         game.check_door = false;
     }
+    for (auto &m: game.monsters)
+    {
+        if (m.dead_timer == 1)
+        {
+            m.type = 0;
+            continue;
+        }
+        if (m.dead_timer > 0)
+        {
+            m.dead_timer--;
+        }
+    }
 }
 
 void startLevel(GameState &game)
@@ -570,7 +585,23 @@ void updateDBullet(GameState &game)
 	if (game.dbullet_px)
 	{
 		game.dbullet_px += game.dbullet_direction * 4;
+        for (auto &m: game.monsters)
+        {
+            if (m.type == 0) continue;
+            mx = m.monster_x;
+            my = m.monster_y;
+
+            if ((grid_y == my || grid_y == my + 1) && (grid_x == mx || grid_x == mx+1))
+            {
+                /* Dave's bullet hits monster */
+                game.dbullet_px = game.dbullet_py = 0;
+                m.dead_timer = 30;
+                add_score(game, 300);
+            }
+        }
 	}
+
+
 }
 
 void drawDBullet(const GameAssets &assets, const GameState &game, GameWindow &gameWindow)
@@ -672,4 +703,79 @@ void moveMonsters(GameState &game)
 			m.monster_y = m.monster_py / TILE_SIZE;
 		}
 	}
+}
+
+/* Checks if an input pixel position is currently visible */
+inline bool isVisible(GameState &game, uint16_t px)
+{
+	uint8_t pos_x = px / TILE_SIZE;
+	return (pos_x - game.view_x < 20 && pos_x - game.view_x >= 0);
+}
+
+void fireMonsters(GameState &game)
+{
+    // Bullet already active
+    if (game.ebullet_px || game.ebullet_py) return;
+
+    for (auto &m: game.monsters)
+    {
+        /* Monster's shoot if they're active and visible */
+        if (m.type && isVisible(game, m.monster_px) && !m.dead_timer)
+        {
+            /* Shoot towards Dave */
+            game.ebullet_direction = game.dave_px < m.monster_px ? -1 : 1;
+
+            if (!game.ebullet_direction)
+                game.ebullet_direction = 1;
+
+            /* Start bullet in front of monster */
+            if (game.ebullet_direction == 1)
+                game.ebullet_px = m.monster_px + 18;
+
+            if (game.ebullet_direction == -1)
+                game.ebullet_px = m.monster_px - 8;
+
+            game.ebullet_py = m.monster_py + 8;
+        }
+    }
+}
+
+void updateEBullet(GameState &game)
+{
+    uint8_t i, grid_x, grid_y, mx, my;
+
+	grid_x = game.ebullet_px / TILE_SIZE;
+	grid_y = game.ebullet_py / TILE_SIZE;
+
+	/* Not active */
+	if (!game.ebullet_px || !game.ebullet_py)
+		return;
+
+	/* Bullet hit something - deactivate */
+	if (!isClear(game, game.ebullet_px, game.ebullet_py, false))
+		game.ebullet_px = game.ebullet_py = 0;
+
+	/* Bullet left room - deactivate */
+	if (!isVisible(game, game.ebullet_px))
+		game.ebullet_px = game.ebullet_py = 0;
+
+	if (game.ebullet_px)
+	{
+		game.ebullet_px += game.ebullet_direction * 4;
+	}
+}
+
+void drawEBullet(const GameAssets &assets, const GameState &game, GameWindow &gameWindow)
+{
+	if (!game.ebullet_px || !game.ebullet_py)
+		return;
+
+    SDL_Rect dest;
+	dest.x = game.ebullet_px - game.view_x * TILE_SIZE;
+	dest.y = game.ebullet_py;
+	dest.w = 12;
+	dest.h = 3;
+	uint8_t tile_index = game.ebullet_direction > 0 ? 121 : 124;
+
+	SDL_RenderCopy(gameWindow.renderer, assets.graphics_tiles[tile_index], NULL, &dest);
 }

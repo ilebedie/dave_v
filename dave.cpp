@@ -33,6 +33,7 @@ void render(const GameAssets &assets, const GameState &game, GameWindow &gameWin
     drawWorld(assets, game, gameWindow);
     drawDave(assets, game, gameWindow);
     drawDBullet(assets, game, gameWindow);
+    drawMonsters(assets, game, gameWindow);
 
     // swap the back buffer with the front buffer
     SDL_RenderPresent(gameWindow.renderer);
@@ -88,6 +89,7 @@ void updateGame(GameState &game, GameWindow &gameWindow)
     checkCollisions(game);
     verifyInput(game);
     moveDave(game);
+    moveMonsters(game);
     updateDBullet(game);
     pickUpItem(game);
     scrollScreen(game);
@@ -274,7 +276,11 @@ void moveDave(GameState &game)
 
     if (game.dave_jump)
     {
-        if (game.jump_timer == 0) game.jump_timer = 20;        
+        if (game.jump_timer == 0) 
+        {
+            game.jump_timer = 25;      
+            game.direction = 0;
+        }  
         if (game.collisionPoints[0] && game.collisionPoints[1])
         {
             game.dave_py -= 2;
@@ -345,8 +351,11 @@ void verifyInput(GameState &game)
         game.dave_fire = true;
     }
 
-    if (game.try_jetpack && game.jetpack)
+    if (game.try_jetpack && game.jetpack && !game.jetpack_delay)
+    {
         game.dave_jetpack = !game.dave_jetpack;
+        game.jetpack_delay = 10;
+    }
     
     if (game.try_down && game.dave_jetpack && game.collisionPoints[4] && game.collisionPoints[5])
     {
@@ -471,6 +480,10 @@ void pickUpItem(GameState &game)
 
 void updateLevel(GameState &game)
 {
+    if (game.jetpack_delay)
+    {
+        game.jetpack_delay--;
+    }
     if (game.check_door)
     {
         if (game.trophy)
@@ -506,11 +519,33 @@ void startLevel(GameState &game)
 		case 9: game.dave_x = 2; game.dave_y = 8; break;
 	}
 
+    for (auto &monster: game.monsters)
+    {
+        monster.type = 0;
+		monster.path_index = 0;
+		monster.dead_timer = 0;
+		monster.next_px = 0;
+		monster.next_py = 0;
+    }
+    switch (game.current_level)
+	{
+		case 2:
+		{
+			game.monsters[0].type = 89;
+			game.monsters[0].monster_px = 44 * TILE_SIZE;
+			game.monsters[0].monster_py = 4 * TILE_SIZE;
+
+			game.monsters[1].type = 89;
+			game.monsters[1].monster_px = 59 * TILE_SIZE;
+			game.monsters[1].monster_py = 4 * TILE_SIZE;
+		} break;
+    }
 	game.dave_px = game.dave_x * TILE_SIZE;
 	game.dave_py = game.dave_y * TILE_SIZE;
     game.trophy = false;
     game.gun = false;
     game.jetpack = 0;
+    game.dave_jetpack = false;
 }
 
 void updateDBullet(GameState &game)
@@ -555,3 +590,86 @@ void drawDBullet(const GameAssets &assets, const GameState &game, GameWindow &ga
 	SDL_RenderCopy(gameWindow.renderer, assets.graphics_tiles[tile_index], NULL, &dest);
 }
 
+void drawMonsters(const GameAssets &assets, const GameState &game, GameWindow &gameWindow)
+{
+    SDL_Rect dest;
+    uint8_t tile_index;
+
+    for (auto &monster: game.monsters)
+    {
+        if (!monster.type)
+            continue;
+
+        dest.x = monster.monster_px - game.view_x * TILE_SIZE;
+        dest.y = monster.monster_py;
+        dest.w = 20;
+        dest.h = 16;
+
+        tile_index = monster.dead_timer ? 129 : monster.type;
+		// tile_index += (game.tick/3) % 4;
+
+        SDL_RenderCopy(gameWindow.renderer, assets.graphics_tiles[tile_index], NULL, &dest);
+    }
+}
+
+/* Move monsters along their predefined path */
+void moveMonsters(GameState &game)
+{
+	for (auto &m: game.monsters)
+	{
+		if (m.type && !m.dead_timer)
+		{
+			/* Move monster twice each tick. Hack to match speed of original game */
+			for (int j = 0; j < 2; j++)
+			{
+				if (!m.next_px && !m.next_py)
+				{
+					/* Get the next path waypoint */
+					m.next_px = game.levels[game.current_level].path[m.path_index];
+					m.next_py = game.levels[game.current_level].path[m.path_index+1];
+					m.path_index+=2;
+
+					/* End of path -- reset monster to start of path */
+					if (m.next_px == (signed char)0xEA && m.next_py == (signed char)0xEA)
+					{
+						m.next_px = game.levels[game.current_level].path[0];
+						m.next_py = game.levels[game.current_level].path[1];
+						m.path_index = 2;
+					}
+				}
+
+				/* Move monster left */
+				if (m.next_px < 0)
+				{
+					m.monster_px -= 1;
+					m.next_px++;
+				}
+
+				/* Move monster right */
+				if (m.next_px > 0)
+				{
+					m.monster_px += 1;
+					m.next_px--;
+				}
+
+				/* Move monster up */
+				if (m.next_py < 0)
+				{
+					m.monster_py -= 1;
+					m.next_py++;
+				}
+
+				/* Move monster down */
+				if (m.next_py > 0)
+				{
+					m.monster_py += 1;
+					m.next_py--;
+				}
+			}
+
+			/* Update monster grid position */
+			m.monster_x = m.monster_px / TILE_SIZE;
+			m.monster_y = m.monster_py / TILE_SIZE;
+		}
+	}
+}

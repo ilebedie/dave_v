@@ -12,6 +12,19 @@ struct DaveLevel {
 	unsigned char padding[24];
 };
 
+struct MonsterState
+{
+	uint8_t type;
+	uint8_t path_index;
+	uint8_t dead_timer;
+	uint8_t monster_x;
+	uint8_t monster_y;
+	uint16_t monster_px;
+	uint16_t monster_py;
+	int8_t next_px;
+	int8_t next_py;
+};
+
 struct GameState {
 	bool quit = false;
 	unsigned char current_level = 2;
@@ -41,6 +54,7 @@ struct GameState {
 	bool dave_jetpack = false;
 	bool dave_up = false;
 	bool dave_down = false;
+	char jetpack_delay = 0;
 
 	bool on_ground = true;
 	unsigned char collisionPoints[8];
@@ -64,6 +78,7 @@ struct GameState {
 	unsigned int score = 0;
 	bool gun = false;
 
+	MonsterState monsters[5];
 	DaveLevel levels[10];
 	GameState();
 	void loadLevels();
@@ -83,14 +98,18 @@ struct GameAssets {
 	SDL_Texture* graphics_tiles[158];
 };
 
+
 void render(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
 void updateGame(GameState &game, GameWindow &gameWindow);
 
 void drawDave(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
+void drawMonsters(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
 
 void drawWorld(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
 void scrollScreen(GameState &game);
 void moveDave(GameState &game);
+void moveMonsters(GameState &game);
+void fireMonsters(GameState &game);
 void verifyInput(GameState &game);
 
 int getDaveState(const GameState &game);
@@ -101,6 +120,8 @@ void pickUpItem(GameState &game);
 void updateLevel(GameState &game);
 void startLevel(GameState &game);
 void updateDBullet(GameState &game);
+void updateEBullet(GameState &game);
 void drawDBullet(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
+void drawEBullet(const GameAssets &assets, const GameState &game, GameWindow &gameWindow);
 
 #endif

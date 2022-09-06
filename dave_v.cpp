@@ -8,6 +8,8 @@ int main(int argc, char* argv[])
     GameWindow gameWindow;
     GameAssets assets(gameWindow);
     GameState game;
+    Entities world;
+
     while(!game.quit)
     {
         auto timer_begin = SDL_GetTicks();

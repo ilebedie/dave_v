@@ -2,11 +2,27 @@
 #define DAVEV_H
 
 #include <SDL.h>
+#include <unordered_map>
 
 // Entities
 using Entity = unsigned long long; 
+using Archetype = unsigned long long; 
 // Components
 struct Position { char px, py; };
+
+struct ArchetypeStorage {
+    // hash of every component in this archetype
+    unsigned long long hash;
+    std::unordered_map<std::string, void *> components;
+};
+
+struct Entities {
+    std::unordered_map<Archetype, ArchetypeStorage> archetypes;
+    Entity entities[1000];
+    Position positions[1000];
+    int size = 0;
+};
+
 // Systems
 struct RendererSystem {
     // Render entity e at position p

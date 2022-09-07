@@ -2,35 +2,13 @@
 #define DAVEV_H
 
 #include <SDL.h>
+#include <string>
 #include <unordered_map>
 
-// Entities
-using Entity = unsigned long long; 
-using Archetype = unsigned long long; 
-// Components
-struct Position { char px, py; };
-
-struct ArchetypeStorage {
-    // hash of every component in this archetype
-    unsigned long long hash;
-    std::unordered_map<std::string, void *> components;
-};
-
-struct Entities {
-    std::unordered_map<Archetype, ArchetypeStorage> archetypes;
-    Entity entities[1000];
-    Position positions[1000];
-    int size = 0;
-};
-
-// Systems
-struct RendererSystem {
-    // Render entity e at position p
-    void update(Entity e, Position p);
-};
-
+// Legacy data structure / should be removed
 struct GameState {
     bool quit = false;
+    int current_level = 0;
 };
 
 struct GameWindow {
@@ -42,9 +20,56 @@ struct GameWindow {
 	void checkInput(GameState &game);
 };
 
+const int TILE_SIZE = 16;
+
+/* Level format structure */
+struct DaveLevel {
+	unsigned char path[256];
+	unsigned char tiles[1000];
+	unsigned char padding[24];
+};
+
 struct GameAssets {
 	GameAssets(GameWindow &gameWindow);
+    void loadLevels();
 	SDL_Texture* graphics_tiles[158];
+    DaveLevel levels[10];
 };
+
+using namespace std;
+template<class K, class V> using ArrayHashMap = unordered_map<K, V>;
+
+// Entities
+using Entity = unsigned long long; 
+// Components
+template<class ComponentType> using Component = ArrayHashMap<Entity, ComponentType>;
+using ArchetypeName = string; 
+using ComponentName = string;
+struct PixelPosition { short px, py; };
+struct TilePosition { short x, y; };
+using TilePositionComponent = Component<TilePosition>;
+using ComponentGenericType = void *;
+using ArchetypeStorage = ArrayHashMap<ComponentName, ComponentGenericType>;
+
+// World / Entities
+struct Entities {
+    ArrayHashMap<ArchetypeName, ArchetypeStorage> archetypes;
+    ArrayHashMap<ComponentName, ComponentGenericType> components;
+    Entities();
+};
+
+// Systems
+struct RendererSystem {
+    Entities &world;
+    GameWindow &gameWindow;
+    GameAssets &gameAssets;
+    GameState &game;
+    // Render entity e at position p
+    RendererSystem(Entities &world, GameWindow &gameWindow, GameAssets &gameAssets, GameState &game) 
+        : world(world), gameWindow(gameWindow), gameAssets(gameAssets), game(game) {}
+
+    void render();
+};
+
 
 #endif

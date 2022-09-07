@@ -3,19 +3,49 @@
 #include <string>
 #include <fstream>
 
+Entities::Entities() {
+    // Initialize components
+}
+
+void RendererSystem::render() {
+    SDL_SetRenderDrawColor(gameWindow.renderer, 0x00, 0x00, 0x00, 0x00);
+    SDL_RenderClear(gameWindow.renderer);
+
+    // TODO: use visible archetype
+    auto positionsComponent = world.components["TilePosition"];
+    auto positions = (TilePositionComponent *)positionsComponent;
+    for (const auto& [entity, pos] : *positions) {
+        // Get entity's tile
+
+        auto position = pos;
+        // render at position
+        SDL_Rect dest;
+        dest.y = position.x * TILE_SIZE;
+        dest.w = TILE_SIZE;
+        dest.h = TILE_SIZE;
+        // Tiles probably need to be stored in a component
+        // Current level probably needs to be stored in a component
+	 	dest.x = position.x * TILE_SIZE;
+	    // int tile_index = gameAssets.levels[game.current_level].tiles[j*100+game.view_x+i];
+	    int tile_index = gameAssets.levels[game.current_level].tiles[pos.y * 100 + 0 + pos.x];
+        SDL_RenderCopy(gameWindow.renderer, gameAssets.graphics_tiles[tile_index], NULL, &dest);
+    }
+}
+
 int main(int argc, char* argv[])
 {
     GameWindow gameWindow;
     GameAssets assets(gameWindow);
     GameState game;
     Entities world;
+    RendererSystem renderer(world, gameWindow, assets, game);
 
     while(!game.quit)
     {
         auto timer_begin = SDL_GetTicks();
         gameWindow.checkInput(game);
+        renderer.render();
         // updateGame(game, gameWindow);
-        // render(assets, game, gameWindow);
         auto timer_end = SDL_GetTicks();
         auto delay = 33 - (timer_end - timer_begin);
         // delay > 33 means that negative overflow happened
@@ -26,10 +56,6 @@ int main(int argc, char* argv[])
 
 }
 
-
-void RendererSystem::update(Entity e, Position p) {
-    // Render entity e at position p
-}
 
 GameAssets::GameAssets(GameWindow &gameWindow)
 {
@@ -77,6 +103,18 @@ GameAssets::GameAssets(GameWindow &gameWindow)
 			graphics_tiles[i] = SDL_CreateTextureFromSurface(gameWindow.renderer, surface);
 			SDL_FreeSurface(surface);
         }
+    }
+}
+
+void GameAssets::loadLevels()
+{
+    for (int j = 0; j < 10; j++)
+    {
+        auto filePath = "assets/levels/level" + std::to_string(j) + ".dat";
+        std::ifstream file(filePath, std::ios::binary);
+        file.read((char *)&levels[j].path, sizeof(levels[j].path));
+        file.read((char *)&levels[j].tiles, sizeof(levels[j].tiles));
+        file.read((char *)&levels[j].padding, sizeof(levels[j].padding));
     }
 }
 

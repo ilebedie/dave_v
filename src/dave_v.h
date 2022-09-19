@@ -1,26 +1,11 @@
 #ifndef DAVEV_H
 #define DAVEV_H
 
-#include <SDL.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 
-// Legacy data structure / should be removed
-struct GameState {
-    bool quit = false;
-    int current_level = 0;
-};
-
-struct GameWindow {
-	const unsigned char DISPLAY_SCALE = 3;
-	SDL_Window* window = nullptr;
-	SDL_Renderer* renderer = nullptr;
-	GameWindow();
-	~GameWindow();
-	void checkInput(GameState &game);
-};
-
+#include "window/game_window.h"
 const short TILE_SIZE = (short)16;
 
 /* Level format structure */

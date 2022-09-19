@@ -8,48 +8,98 @@ long long generateEid() {
 }
 
 Entities::Entities() {
-    Tile tile = {10, 10, 20, 20, 18, true};
-    long long eid = generateEid();
+    Entity eid = 0;// generateEid();
+    Tile tile = {18}; // visible tile, hangs in the air
     tileComponent[eid] = tile;
+    Visibility visibility = {true};
+    visibilityComponent[eid] = visibility;
+    PixelPosition pixelPosition = {20, 20};
+    pixelPositionComponent[eid] = pixelPosition;
+    nonFloatingTilesComponent.insert(eid);
+    tilesPositionIndex[pixelPosition] = eid;
+
+    Entity eid1 = 1;// generateEid();
+    Tile tile1 = {17};
+    tileComponent[eid1] = tile1;
+    Visibility visibility1 = {false};
+    visibilityComponent[eid1] = visibility1;
+    PixelPosition pixelPosition1 = {40, 40};
+    pixelPositionComponent[eid1] = pixelPosition1;
+    tilesPositionIndex[pixelPosition1] = eid1;
+
+    Entity eid2 = 2;// generateEid();
+    Tile tile2 = {20}; // visible tile, falls down
+    tileComponent[eid2] = tile2;
+    Visibility visibility2 = {true};
+    visibilityComponent[eid2] = visibility2;
+    PixelPosition pixelPosition2 = {60, 60};
+    pixelPositionComponent[eid2] = pixelPosition2;
+    tilesPositionIndex[pixelPosition2] = eid2;
+
+    Entity eid3 = 3;// generateEid();
+    Tile tile3 = {19}; // visible tile, falls down
+    tileComponent[eid3] = tile3;
+    Visibility visibility3 = {true};
+    visibilityComponent[eid3] = visibility3;
+    PixelPosition pixelPosition3 = {20, 80};
+    pixelPositionComponent[eid3] = pixelPosition3;
+    tilesPositionIndex[pixelPosition3] = eid3;
     
     components["Tile"] = &tileComponent; 
-    // Initialize components
+    components["Visibility"] = &visibilityComponent;
+    components["PixelPosition"] = &pixelPositionComponent;
+    components["NonFloatingTiles"] = &nonFloatingTilesComponent;
 }
 
-SDL_Texture* RendererSystem::_getTexture(Tile t) {
+SDL_Texture* RendererSystem::_getTexture(int tile_index) {
     // Move to texture atlas to a component
-    return gameAssets.graphics_tiles[t.tile_index];
+    return gameAssets.graphics_tiles[tile_index];
 }
 
 void RendererSystem::render() {
     SDL_SetRenderDrawColor(gameWindow.renderer, 0x00, 0x00, 0x00, 0x00);
     SDL_RenderClear(gameWindow.renderer);
 
-    // TODO: Tile is actually an archetype
-    // It should be broken out into a separate components
+    // TODO: combine these components into archetype
     auto tilesComponent = world.components["Tile"];
     auto tiles = (TileComponent *)tilesComponent;
-    for (const auto& [entity, tile] : *tiles) {
-        if (!tile.visible) continue;
+    auto visibilityComponent = world.components["Visibility"];
+    auto visibilityP = (VisibilityComponent *)visibilityComponent;
+    auto pixelPositionComponent = world.components["PixelPosition"];
+    auto pixelPositionP = (PixelPositionComponent *)pixelPositionComponent;
 
-        SDL_Rect dest;
-        dest.y = tile.py;
-        dest.w = TILE_SIZE;
-        dest.h = TILE_SIZE;
-	 	dest.x = tile.px;
-        auto tileTexture = _getTexture(tile);
-
-        SDL_RenderCopy(gameWindow.renderer, tileTexture, NULL, &dest);
+    for (auto it = tiles->begin(); it != tiles->end(); ++it) {
+        auto eid = it->first;
+        auto tile = it->second;
+        auto visibility = (*visibilityP)[eid];
+        auto pixelPosition = (*pixelPositionP)[eid];
+        if (visibility.visible) {
+            SDL_Rect dstrect = {pixelPosition.px, pixelPosition.py, TILE_SIZE, TILE_SIZE};
+            SDL_RenderCopy(gameWindow.renderer, _getTexture(tile.tile_index), NULL, &dstrect);
+        }
     }
+
     SDL_RenderPresent(gameWindow.renderer);
 }
 
 void GravitySystem::update() {
     auto tilesComponent = world.components["Tile"];
-    auto tiles = (TileComponent *)tilesComponent;
-    for (const auto& [entity, tile] : *tiles) {
-        if (!tile.visible) continue;
-        tile.py += 1;
+    auto tilesP = (TileComponent *)tilesComponent;
+    auto nonFloatingTilesComponent = world.components["NonFloatingTiles"];
+    auto nonFloatingTilesP = (NonFloatingTilesComponent *)nonFloatingTilesComponent;
+    auto tilesPositionIndexP = &world.tilesPositionIndex;
+    for (auto eid = nonFloatingTilesP->begin(); eid != nonFloatingTilesP->end(); ++eid) {
+        auto& pixelPosition = world.pixelPositionComponent[*eid];
+
+        short tileBelowY = pixelPosition.py + TILE_SIZE;
+        PixelPosition tileBelow {pixelPosition.px, tileBelowY};
+
+        if (tilesPositionIndexP->find(tileBelow) == tilesPositionIndexP->end()) {
+            tilesPositionIndexP->erase(pixelPosition);
+            pixelPosition.py += 1;
+            world.pixelPositionComponent[*eid] = pixelPosition;
+            tilesPositionIndexP->insert({pixelPosition, *eid});
+        }
     }
 }
 
@@ -59,13 +109,15 @@ int main(int argc, char* argv[])
     GameAssets assets(gameWindow);
     GameState game;
     Entities world;
-    RendererSystem renderer(world, gameWindow, assets, game);
+    RendererSystem renderer(world, gameWindow, assets);
+    GravitySystem gravitySystem(world);
 
     while(!game.quit)
     {
         auto timer_begin = SDL_GetTicks();
         gameWindow.checkInput(game);
         renderer.render();
+        gravitySystem.update();
         // updateGame(game, gameWindow);
         auto timer_end = SDL_GetTicks();
         auto delay = 33 - (timer_end - timer_begin);

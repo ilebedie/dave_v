@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 // Legacy data structure / should be removed
 struct GameState {
@@ -20,7 +21,7 @@ struct GameWindow {
 	void checkInput(GameState &game);
 };
 
-const int TILE_SIZE = 16;
+const short TILE_SIZE = (short)16;
 
 /* Level format structure */
 struct DaveLevel {
@@ -39,22 +40,43 @@ template<class K, class V> using ArrayHashMap = unordered_map<K, V>;
 
 // Entities
 using Entity = unsigned long long; 
+
+
 // Components
 template<class ComponentType> using Component = ArrayHashMap<Entity, ComponentType>;
+using BoolComponent = unordered_set<Entity>;
 using ArchetypeName = string; 
 using ComponentName = string;
-// struct PixelPosition { short px, py; };
-// struct TilePosition { short x, y; };
-struct Tile
-{
-    short x, y;
-    short px, py;
-    short tile_index;
-    bool visible;
+
+struct PixelPosition { 
+    short px, py; 
+    bool operator==(const PixelPosition& other) const {
+        return px == other.px && py == other.py;
+    }
 };
+using PixelPositionComponent = Component<PixelPosition>;
+
+struct Visibility { bool visible; };
+using VisibilityComponent = Component<Visibility>;
+
+struct Tile { short tile_index; };
 using TileComponent = Component<Tile>;
+
+using NonFloatingTilesComponent = BoolComponent;
+
 using ComponentGenericType = void *;
 using ArchetypeStorage = ArrayHashMap<ComponentName, ComponentGenericType>;
+
+// Indexes
+// Custom hash function for PixelPosition
+struct PixelPositionHash {
+    size_t operator()(const PixelPosition& k) const {
+        return ((hash<short>()(k.px) ^ (hash<short>()(k.py) << 1)) >> 1);
+    }
+};
+// using TilePositionIndex = unordered_map<PixelPosition, Entity, hash_fn>;
+using TilePositionIndex = unordered_map<PixelPosition, Entity, PixelPositionHash>;
+
 
 // World / Entities
 struct Entities {
@@ -64,7 +86,13 @@ struct Entities {
 
     // This is here because of ComponentGenericType is void *
     // And someone should control lifetime of component
+    PixelPositionComponent pixelPositionComponent;
     TileComponent tileComponent;
+    VisibilityComponent visibilityComponent;
+    NonFloatingTilesComponent nonFloatingTilesComponent;
+
+    // Indexes
+    TilePositionIndex tilesPositionIndex;
 };
 
 // Systems
@@ -72,13 +100,21 @@ struct RendererSystem {
     Entities &world;
     GameWindow &gameWindow;
     GameAssets &gameAssets;
-    GameState &game;
     // Render entity e at position p
-    RendererSystem(Entities &world, GameWindow &gameWindow, GameAssets &gameAssets, GameState &game) 
-        : world(world), gameWindow(gameWindow), gameAssets(gameAssets), game(game) {}
+    RendererSystem(Entities &world, GameWindow &gameWindow, GameAssets &gameAssets) 
+        : world(world), gameWindow(gameWindow), gameAssets(gameAssets) {}
 
     void render();
-    SDL_Texture* _getTexture(Tile tile);
+    SDL_Texture* _getTexture(int tile_index);
+};
+
+struct GravitySystem {
+    Entities &world;
+    // Apply gravity to non-floating entity e
+    GravitySystem(Entities &world) 
+        : world(world) {}
+
+    void update();
 };
 
 

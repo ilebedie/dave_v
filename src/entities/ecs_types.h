@@ -18,7 +18,6 @@ struct PixelPosition {
         return px == other.px && py == other.py;
     }
 };
-struct Visibility { bool visible; };
 struct Tile { short tile_index; };
 
 struct GameAssets {

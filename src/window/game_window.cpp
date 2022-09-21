@@ -3,6 +3,11 @@
 
 using namespace std;
 
+void GameWindow::fillBlack() {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+}
+
 GameWindow::GameWindow() {
     if (SDL_Init(SDL_INIT_VIDEO)) {
         cout << "SDL_Init Error: " << SDL_GetError() << endl;
@@ -18,13 +23,18 @@ GameWindow::GameWindow() {
     SDL_RenderClear(renderer);
 }
 
-void GameWindow::checkInput(GameState &game) {
+void GameWindow::checkInput() {
 	SDL_Event event;
 	SDL_PollEvent(&event);
-    if (event.type == SDL_QUIT) game.quit = true;
+    if (event.type == SDL_QUIT) input.quit = true;
     auto keyState = SDL_GetKeyboardState(NULL);
     // if (keyState[SDL_SCANCODE_UP]) game.try_jump = true;
-    if (keyState[SDL_SCANCODE_ESCAPE]) game.quit = true;
+
+    // TODO: should check for key pressed/released
+    if (keyState[SDL_SCANCODE_UP]) input.try_jump = true;
+    if (keyState[SDL_SCANCODE_LEFT]) input.try_left = true;
+    if (keyState[SDL_SCANCODE_RIGHT]) input.try_right = true;
+    if (keyState[SDL_SCANCODE_ESCAPE]) input.quit = true;
 }
 
 GameWindow::~GameWindow() {

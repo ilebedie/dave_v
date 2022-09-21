@@ -14,7 +14,7 @@ using ArchetypeStorage = ArrayHashMap<ComponentName, ComponentGenericType>;
 
 // Component definitions
 using PixelPositionComponent = Component<PixelPosition>;
-using VisibilityComponent = Component<Visibility>;
+using VisibilityComponent = BoolComponent;
 using TileComponent = Component<Tile>;
 using NonFloatingTilesComponent = BoolComponent;
 

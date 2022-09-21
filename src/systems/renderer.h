@@ -8,11 +8,12 @@ struct RendererSystem {
     Entities &world;
     GameWindow &gameWindow;
     GameAssets &gameAssets;
-    // Render entity e at position p
+    short camera_x = 0;
+    short camera_y = 0;
 
     RendererSystem(Entities &world, GameWindow &gameWindow, GameAssets &gameAssets) 
         : world(world), gameWindow(gameWindow), gameAssets(gameAssets) {}
-    void render();
+    void update();
     SDL_Texture* _getTexture(int tile_index);
 };
 

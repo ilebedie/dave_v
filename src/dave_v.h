@@ -5,5 +5,6 @@
 #include "entities/entity.h"
 #include "systems/gravity.h"
 #include "systems/renderer.h"
+#include "systems/mover.h"
 
 #endif

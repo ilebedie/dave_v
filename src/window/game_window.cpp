@@ -35,6 +35,7 @@ void GameWindow::checkInput() {
     if (keyState[SDL_SCANCODE_LEFT]) input.try_left = true;
     if (keyState[SDL_SCANCODE_RIGHT]) input.try_right = true;
     if (keyState[SDL_SCANCODE_ESCAPE]) input.quit = true;
+    if (keyState[SDL_SCANCODE_R]) input.restart = true;
 }
 
 GameWindow::~GameWindow() {

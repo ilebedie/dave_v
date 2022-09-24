@@ -7,10 +7,6 @@ using namespace std;
 
 template<class ComponentType> using Component = ArrayHashMap<Entity, ComponentType>;
 using BoolComponent = unordered_set<Entity>;
-using ArchetypeName = string; 
-using ComponentName = string;
-using ComponentGenericType = void *;
-using ArchetypeStorage = ArrayHashMap<ComponentName, ComponentGenericType>;
 
 // Component definitions
 using PixelPositionComponent = Component<PixelPosition>;

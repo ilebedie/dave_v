@@ -8,13 +8,9 @@ SDL_Texture* RendererSystem::_getTexture(int tile_index) {
 void RendererSystem::update() {
     gameWindow.fillBlack();
 
-    // TODO: combine these components into archetype
-    auto tilesComponent = world.components["Tile"];
-    auto tiles = (TileComponent *)tilesComponent;
-    auto visibilityComponent = world.components["Visibility"];
-    auto visibilityP = (VisibilityComponent *)visibilityComponent;
-    auto pixelPositionComponent = world.components["PixelPosition"];
-    auto pixelPositionP = (PixelPositionComponent *)pixelPositionComponent;
+    auto tiles = &world.tileComponent;
+    auto visibilityP = &world.visibilityComponent;
+    auto pixelPositionP = &world.pixelPositionComponent;
 
     for (auto it = tiles->begin(); it != tiles->end(); ++it) {
         auto eid = it->first;

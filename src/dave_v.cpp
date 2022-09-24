@@ -8,7 +8,7 @@ GravitySystem gravitySystem(world);
 MoverSystem moverSystem(world, gameWindow.input);
 
 void update() {
-    // gravitySystem.update();
+    gravitySystem.update();
     moverSystem.update();
     renderer.update();
 }
@@ -20,6 +20,9 @@ int main(int argc, char* argv[])
         gameWindow.input.reset();
         auto timer_begin = SDL_GetTicks();
         gameWindow.checkInput();
+        if (gameWindow.input.restart) {
+            world.reset();
+        }
         update();
         auto timer_end = SDL_GetTicks();
         auto delay = 33 - (timer_end - timer_begin);

@@ -9,11 +9,13 @@ struct GameInput {
 	bool try_left = false;
 	bool try_right = false;
 	bool try_jump = false;
+	bool restart = false;
 
 	void reset() {
 		try_left = false;
 		try_right = false;
 		try_jump = false;
+		restart = false;
 	}
 };
 

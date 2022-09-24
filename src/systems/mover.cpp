@@ -1,24 +1,48 @@
 #include "mover.h"
 
 void MoverSystem::update() {
-    auto tilesComponent = world.components["Tile"];
-    auto tilesP = (TileComponent *)tilesComponent;
-    auto nonFloatingTilesComponent = world.components["NonFloatingTiles"];
-    auto nonFloatingTilesP = (NonFloatingTilesComponent *)nonFloatingTilesComponent;
-    auto tilesPositionIndexP = &world.tilesPositionIndex;
+    auto tilesP = &world.tileComponent;
+    auto nonFloatingTilesP = &world.nonFloatingTilesComponent;
+    auto tilesPositionIndexP = &world.floatingTilesPositionIndex;
     Entity eid = 0; // Dave 
 
     if(!input.try_left && !input.try_right ) {
         return;
     }
 
-    auto& pixelPosition = world.pixelPositionComponent[eid];
-    short nextTileX = pixelPosition.px + (input.try_left ? -TILE_SIZE : TILE_SIZE);
-    PixelPosition tileLeft {nextTileX, pixelPosition.py};
-    if (tilesPositionIndexP->find(tileLeft) == tilesPositionIndexP->end()) {
-        tilesPositionIndexP->erase(pixelPosition);
-        pixelPosition.px += (input.try_left ?  -1: 1);
-        world.pixelPositionComponent[eid] = pixelPosition;
-        tilesPositionIndexP->insert({pixelPosition, eid});
+    short move_x = input.try_left ? -1 : 1;
+    for (auto eid = nonFloatingTilesP->begin(); eid != nonFloatingTilesP->end(); ++eid) {
+        PixelPosition &pixelPosition = world.pixelPositionComponent[*eid];
+        if (pixelPosition.px % TILE_SIZE != 0) {
+            pixelPosition.px += move_x;
+            continue;
+        }
+
+        if (input.try_right) {
+            short x = pixelPosition.px + TILE_SIZE;
+            short y = pixelPosition.py - pixelPosition.py % TILE_SIZE;
+            PixelPosition rightTileUpper = {x,y};
+            y += TILE_SIZE;
+            PixelPosition rightTileLower = {x,y};
+            bool noTilesRight = \
+                tilesPositionIndexP->find(rightTileUpper) == tilesPositionIndexP->end()
+                && tilesPositionIndexP->find(rightTileLower) == tilesPositionIndexP->end();
+            if (noTilesRight) {
+                pixelPosition.px += move_x;
+            }
+        }
+        else {
+            short x = pixelPosition.px - TILE_SIZE;
+            short y = pixelPosition.py - pixelPosition.py % TILE_SIZE;
+            PixelPosition leftTileUpper = {x,y};
+            y += TILE_SIZE;
+            PixelPosition leftTileLower = {x,y};
+            bool noTilesLeft = \
+                tilesPositionIndexP->find(leftTileUpper) == tilesPositionIndexP->end()
+                && tilesPositionIndexP->find(leftTileLower) == tilesPositionIndexP->end();
+            if (noTilesLeft) {
+                pixelPosition.px += move_x;
+            }
+        }
     }
 }
